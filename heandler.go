@@ -2,7 +2,12 @@ package restlogger
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -31,3 +36,31 @@ func NewHeandler(connString string) (*Heandler, error) {
 	}
 }
 
+
+func (h *Heandler) UpsertLog(w http.ResponseWriter, r *http.Request) {
+    var log_data LogRow
+    if err := json.NewDecoder(r.Body).Decode(&log_data); err != nil {
+        http.Error(w, err.Error(), http.StatusBadRequest)
+        return
+    }
+    upsert := `INSERT INTO logs.app_logs(uuid, app_name, static_data, dinamic_data, upd_dttm, upd_cnt, read_flg)
+			   VALUES (@uuid, @app_name, @static_data, @dinamic_data, Now(), 1, false)
+			   ON CONFLICT (app_name, static_data) 
+			   DO UPDATE SET 
+    		       dinamic_data = EXCLUDED.dinamic_data,
+    			   upd_dttm = EXCLUDED.upd_dttm,
+    			   upd_cnt = logs.app_logs.upd_cnt + 1
+    			   read_flg = EXCLUDED.read_flg;
+	`
+	args := pgx.NamedArgs{
+		"uuid"        : uuid.New().String(),
+		"app_name"    : log_data.AppName, 
+		"static_data" : log_data.StaticData,
+		"dinamic_data": log_data.DinamicData,
+	}
+	if _, err := h.repo.Exec(context.Background(), upsert, args); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+	}
+	w.WriteHeader(http.StatusCreated)
+}
