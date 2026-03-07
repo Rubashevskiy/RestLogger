@@ -43,11 +43,11 @@ func (h *Heandler) UpsertLog(w http.ResponseWriter, r *http.Request) {
         http.Error(w, err.Error(), http.StatusBadRequest)
         return
     }
-    upsert := `INSERT INTO logs.app_logs(uuid, app_name, static_data, dinamic_data, upd_dttm, upd_cnt, read_flg)
-			   VALUES (@uuid, @app_name, @static_data, @dinamic_data, Now(), 1, false)
+    upsert := `INSERT INTO logs.app_logs(uuid, app_name, static_data, dynamic_data, upd_dttm, upd_cnt, read_flg)
+			   VALUES (@uuid, @app_name, @static_data, @dynamic_data, Now(), 1, false)
 			   ON CONFLICT (app_name, static_data) 
 			   DO UPDATE SET 
-    		       dinamic_data = EXCLUDED.dinamic_data,
+    		       dynamic_data = EXCLUDED.dynamic_data,
     			   upd_dttm = EXCLUDED.upd_dttm,
     			   upd_cnt = logs.app_logs.upd_cnt + 1
     			   read_flg = EXCLUDED.read_flg;
@@ -56,7 +56,7 @@ func (h *Heandler) UpsertLog(w http.ResponseWriter, r *http.Request) {
 		"uuid"        : uuid.New().String(),
 		"app_name"    : log_data.AppName, 
 		"static_data" : log_data.StaticData,
-		"dinamic_data": log_data.DinamicData,
+		"dynamic_data": log_data.DynamicData,
 	}
 	if _, err := h.repo.Exec(context.Background(), upsert, args); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
