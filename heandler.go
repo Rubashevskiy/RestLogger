@@ -36,7 +36,6 @@ func NewHeandler(connString string) (*Heandler, error) {
 	}
 }
 
-
 func (h *Heandler) UpsertLog(w http.ResponseWriter, r *http.Request) {
     var log_data LogRow
     if err := json.NewDecoder(r.Body).Decode(&log_data); err != nil {
@@ -63,4 +62,15 @@ func (h *Heandler) UpsertLog(w http.ResponseWriter, r *http.Request) {
         return
 	}
 	w.WriteHeader(http.StatusCreated)
+}
+
+func (h *Heandler) Status() (bool) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5* time.Second)
+	defer cancel()
+
+	if err := h.repo.Ping(ctx); err != nil {
+		return false
+	} else {
+		return true
+	}	
 }
